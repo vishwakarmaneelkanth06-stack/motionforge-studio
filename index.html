@@ -1,0 +1,64 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MotionForge Studio</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#10111a;color:white;font-family:Arial,sans-serif}
+header{padding:22px;background:#191b29;border-bottom:1px solid #333}
+h1{margin:0;color:#9b8cff}
+header p{color:#aaa;margin-bottom:0}
+main{padding:20px;max-width:900px;margin:auto}
+.panel{background:#1b1d2b;padding:20px;border-radius:15px;margin:15px 0}
+textarea{width:100%;height:130px;background:#10111a;color:white;border:1px solid #555;border-radius:9px;padding:12px}
+button{background:#7865ed;color:white;border:0;padding:13px 18px;border-radius:9px;margin:5px;cursor:pointer}
+button:hover{background:#5d4bd0}
+input{max-width:100%}
+#preview{background:#080910;padding:20px;border-radius:10px;min-height:100px;color:#aaa}
+</style>
+</head>
+<body>
+<header>
+<h1>⚡ MotionForge Studio</h1>
+<p>Creative Video & Animation Workspace</p>
+</header>
+<main>
+<div class="panel">
+<h2>🎬 Video Workspace</h2>
+<p>Apna video select karo:</p>
+<input type="file" id="video" accept="video/*">
+<video id="player" controls style="width:100%;margin-top:15px;display:none"></video>
+</div>
+<div class="panel">
+<h2>✨ Animation Storyboard</h2>
+<p>Apni kahani ya scene likho:</p>
+<textarea id="story" placeholder="Yahan apni kahani likho..."></textarea>
+<button onclick="makeStory()">Create Storyboard</button>
+<div id="preview">Tumhara storyboard yahan dikhega.</div>
+</div>
+<div class="panel">
+<h2>🎨 Motion Graphics</h2>
+<button onclick="alert('MotionForge ka next version mein effects add honge!')">Explore Effects</button>
+<button onclick="alert('More animation tools coming soon!')">Animation Tools</button>
+</div>
+</main>
+<script>
+const video=document.getElementById('video');
+video.addEventListener('change',function(){
+if(this.files[0]){
+const player=document.getElementById('player');
+player.src=URL.createObjectURL(this.files[0]);
+player.style.display='block';
+}
+});
+function makeStory(){
+const story=document.getElementById('story').value.trim();
+document.getElementById('preview').innerText=
+story ? 'YOUR STORYBOARD\n\n'+story : 'Pehle apni kahani likho.';
+}
+</script>
+</body>
+</html>
