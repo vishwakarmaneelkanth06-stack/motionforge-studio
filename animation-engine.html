@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MotionForge 2D Animation Engine</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0a1020;color:white;font-family:Arial}
+header{padding:18px;text-align:center;background:#182448}
+h1{color:#aab8ff;margin:0}
+main{max-width:1000px;margin:auto;padding:14px}
+.card{background:#17213a;padding:15px;border:1px solid #354568;border-radius:12px;margin:14px 0}
+h2{color:#aab8ff;font-size:19px}
+label{display:block;margin:10px 0 5px}
+input,select{width:100%;padding:10px;background:#0a1429;color:white;border:1px solid #46587c;border-radius:7px}
+button{padding:11px 15px;border:0;border-radius:7px;background:#7186ff;color:white;font-weight:bold;margin:5px 4px 5px 0}
+button.secondary{background:#3a4c70}
+canvas{width:100%;background:#b9e5ff;border-radius:9px;display:block}
+.small{font-size:13px;color:#b6c3df}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row button{flex:1}
+</style>
+</head>
+<body>
+
+<header>
+<h1>⚡ MotionForge 2D Engine</h1>
+<p>Character Animation Workspace</p>
+</header>
+
+<main>
+
+<div class="card">
+<h2>🎨 Animation Scene</h2>
+<canvas id="stage" width="900" height="500"></canvas>
+<p class="small">Live 2D character animation preview.</p>
+</div>
+
+<div class="card">
+<h2>🧍 Character Settings</h2>
+
+<label>Character Name</label>
+<input id="name" value="Rahul">
+
+<label>Character Shirt Colour</label>
+<input id="shirt" type="color" value="#ff704f">
+
+<label>Character Skin Colour</label>
+<input id="skin" type="color" value="#c98b61">
+
+<label>Character Hair Colour</label>
+<input id="hair" type="color" value="#25202b">
+
+<label>Background</label>
+<select id="background">
+<option value="village">Indian Village</option>
+<option value="forest">Green Forest</option>
+<option value="night">Night Scene</option>
+<option value="plain">Plain Background</option>
+</select>
+
+<label>Animation Action</label>
+<select id="action">
+<option value="idle">Standing</option>
+<option value="walk">Walking</option>
+<option value="wave">Waving Hand</option>
+<option value="jump">Jumping</option>
+<option value="run">Running</option>
+</select>
+
+<div class="row">
+<button onclick="play()">▶ Play</button>
+<button class="secondary" onclick="pause()">⏸ Pause</button>
+<button class="secondary" onclick="reset()">↺ Reset</button>
+</div>
+</div>
+
+<div class="card">
+<h2>⏱️ Timeline</h2>
+<label>Animation Duration: <span id="durationLabel">5</span> seconds</label>
+<input id="duration" type="range" min="2" max="15" value="5"
+oninput="durationLabel.textContent=this.value">
+
+<label>Animation Speed</label>
+<input id="speed" type="range" min="0.3" max="2" step="0.1" value="1">
+
+<label>Timeline Progress</label>
+<input id="progress" type="range" min="0" max="100" value="0"
+oninput="seek(this.value)">
+<p class="small" id="timer">00:00 / 00:05</p>
+</div>
+
+<div class="card">
+<h2>🎥 Export Animation</h2>
+<button onclick="exportVideo()">⬇ Export WebM Video</button>
+<p class="small">Browser support ke hisaab se WebM recording download hogi. MP4 export abhi included nahi hai.</p>
+<div id="status" class="small">Ready.</div>
+</div>
+
+</main>
+
+<script>
+const canvas=document.getElementById("stage");
+const ctx=canvas.getContext("2d");
+
+let playing=false;
+let startTime=0;
+let elapsed=0;
+let animationId=null;
+let recording=false;
+
+const duration=()=>Number(document.getElementById("duration").value)*1000;
+const speed=()=>Number(document.getElementById("speed").value);
+
+function line(x1,y1,x2,y2,color,width){
+ ctx.beginPath();
+ ctx.moveTo(x1,y1);
+ ctx.lineTo(x2,y2);
+ ctx.strokeStyle=color;
+ ctx.lineWidth=width;
+ ctx.lineCap="round";
+ ctx.stroke();
+}
+
+function circle(x,y,r,color){
+ ctx.beginPath();
+ ctx.arc(x,y,r,0,Math.PI*2);
+ ctx.fillStyle=color;
+ ctx.fill();
+}
+
+function drawBackground(){
+ const bg=document.getElementById("background").value;
+
+ if(bg==="night"){
+  ctx.fillStyle="#17223e";
+  ctx.fillRect(0,0,900,500);
+  circle(730,80,42,"#fff0bb");
+  for(let i=0;i<20;i++){
+   circle((i*137)%900,(i*71)%180,2,"white");
+  }
+  ctx.fillStyle="#263a42";
+  ctx.fillRect(0,380,900,120);
+ }else if(bg==="forest"){
+  ctx.fillStyle="#b4e8c0";
+  ctx.fillRect(0,0,900,500);
+  ctx.fillStyle="#498d54";
+  ctx.fillRect(0,370,900,130);
+  for(let i=0;i<7;i++){
+   const x=i*145+20;
+   ctx.fillStyle="#74513a";
+   ctx.fillRect(x+25,180,22,220);
+   circle(x+35,160,65,"#247848");
+   circle(x,190,40,"#2c9452");
+   circle(x+70,190,42,"#277b45");
+  }
+ }else if(bg==="village"){
+  ctx.fillStyle="#b7e7ff";
+  ctx.fillRect(0,0,900,500);
+  circle(760,85,45,"#ffdc71");
+  ctx.fillStyle="#75bd69";
+  ctx.fillRect(0,360,900,140);
+  ctx.fillStyle="#b98552";
+  ctx.fillRect(80,230,180,150);
+  ctx.fillStyle="#814631";
+  ctx.beginPath();
+  ctx.moveTo(60,230);
+  ctx.lineTo(170,140);
+  ctx.lineTo(280,230);
+  ctx.fill();
+  ctx.fillStyle="#47372c";
+  ctx.fillRect(145,290,50,90);
+  ctx.fillStyle="#8e6846";
+  ctx.fillRect(560,250,190,130);
+  ctx.fillStyle="#713e32";
+  ctx.beginPath();
+  ctx.moveTo(535,250);
+  ctx.lineTo(655,165);
+  ctx.lineTo(775,250);
+  ctx.fill();
+ }else{
+  ctx.fillStyle="#b9e5ff";
+  ctx.fillRect(0,0,900,500);
+  ctx.fillStyle="#85cb79";
+  ctx.fillRect(0,380,900,120);
+ }
+}
+
+function drawCharacter(t){
+ const action=document.getElementById("action").value;
+ const skin=document.getElementById("skin").value;
+ const shirt=document.getElementById("shirt").value;
+ const hair=document.getElementById("hair").value;
+
+ const cycle=t*0.006*speed();
+ let x=450;
+ let y=290;
+ let leftLeg=0,rightLeg=0;
+ let leftArm=0,rightArm=0;
+ let jump=0;
+
+ if(action==="walk"||action==="run"){
+  x=450+Math.sin(cycle)*90;
+  leftLeg=Math.sin(cycle)*35;
+  rightLeg=-leftLeg;
+  leftArm=-leftLeg*.8;
+  rightArm=-rightArm+leftLeg*.8;
+  if(action==="run") y=290+Math.abs(Math.sin(cycle))*-8;
+ }
+ if(action==="wave"){
+  rightArm=Math.sin(cycle*1.7)*35-100;
+ }
+ if(action==="jump"){
+  jump=Math.abs(Math.sin(cycle))*85;
+ }
+ y-=jump;
+
+ const legY=y+78;
+ const headY=y-45;
+
+ // Shadow
+ ctx.globalAlpha=.18;
+ circle(x,415,40,"#17212e");
+ ctx.globalAlpha=1;
+
+ // Legs
+ line(x-12,legY,x-16+leftLeg,legY+72,"#303a51",14);
+ line(x+12,legY,x+16+rightLeg,legY+72,"#303a51",14);
+
+ // Shoes
+ line(x-16+leftLeg,legY+72,x-32+leftLeg,legY+73,"#292d3a",10);
+ line(x+16+rightLeg,legY+72,x+32+rightLeg,legY+73,"#292d3a",10);
+
+ // Body
+ ctx.fillStyle=shirt;
+ ctx.beginPath();
+ ctx.roundRect(x-27,y-5,54,91,13);
+ ctx.fill();
+
+ // Arms
+ const armAngleLeft=leftArm*Math.PI/180;
+ const armAngleRight=rightArm*Math.PI/180;
+
+ const lx=x-25;
+ const ly=y+8;
+ const rx=x+25;
+ const ry=y+8;
+
+ const lEndX=lx+Math.sin(armAngleLeft)*62;
+ const lEndY=ly+Math.cos(armAngleLeft)*62;
+ const rEndX=rx+Math.sin(armAngleRight)*62;
+ const rEndY=ry+Math.cos(armAngleRight)*62;
+
+ line(lx,ly,lEndX,lEndY,skin,12);
+ line(rx,ry,rEndX,rEndY,skin,12);
+ circle(lEndX,lEndY,8,skin);
+ circle(rEndX,rEndY,8,skin);
+
+ // Neck
+ ctx.fillStyle=skin;
+ ctx.fillRect(x-8,y-17,16,20);
+
+ // Head
+ circle(x,headY,32,skin);
+
+ // Hair
+ ctx.fillStyle=hair;
+ ctx.beginPath();
+ ctx.arc(x,headY-7,32,Math.PI,Math.PI*2);
+ ctx.fill();
+ ctx.fillRect(x-31,headY-9,12,18);
+
+ // Eyes
+ circle(x-11,headY,3,"#25202b");
+ circle(x+11,headY,3,"#25202b");
+
+ // Smile
+ ctx.beginPath();
+ ctx.arc(x,headY+8,10,.15,Math.PI-.15);
+ ctx.strokeStyle="#633e37";
+ ctx.lineWidth=2;
+ ctx.stroke();
+
+ // Name
+ ctx.fillStyle="#18223b";
+ ctx.font="bold 17px Arial";
+ ctx.textAlign="center";
+ ctx.fillText(document.getElementById("name").value,x,465);
+}
+
+function draw(t=elapsed){
+ drawBackground();
+ drawCharacter(t);
+}
+
+function frame(now){
+ if(!playing)return;
+
+ elapsed=(now-startTime);
+ if(elapsed>=duration()){
+  elapsed=duration();
+  pause();
+ }
+
+ draw(elapsed);
+ updateTimeline();
+ animationId=requestAnimationFrame(frame);
+}
+
+function play(){
+ if(playing)return;
+ playing=true;
+ startTime=performance.now()-elapsed;
+ animationId=requestAnimationFrame(frame);
+}
+
+function pause(){
+ playing=false;
+ if(animationId)cancelAnimationFrame(animationId);
+ updateTimeline();
+}
+
+function reset(){
+ pause();
+ elapsed=0;
+ draw(0);
+ updateTimeline();
+}
+
+function seek(value){
+ pause();
+ elapsed=duration()*Number(value)/100;
+ draw(elapsed);
+ updateTimeline();
+}
+
+function updateTimeline(){
+ const total=duration();
+ document.getElementById("progress").value=total?elapsed/total*100:0;
+
+ const current=Math.floor(elapsed/1000);
+ const max=Math.floor(total/1000);
+ document.getElementById("timer").textContent=
+  "00:"+String(current).padStart(2,"0")+
+  " / 00:"+String(max).padStart(2,"0");
+}
+
+async function exportVideo(){
+ if(!canvas.captureStream || !window.MediaRecorder){
+  alert("Is browser mein video recording support nahi hai.");
+  return;
+ }
+
+ pause();
+ elapsed=0;
+ draw(0);
+
+ const stream=canvas.captureStream(30);
+ let mime="video/webm;codecs=vp9";
+
+ if(!MediaRecorder.isTypeSupported(mime)){
+  mime="video/webm";
+ }
+ if(!MediaRecorder.isTypeSupported(mime)){
+  alert("WebM recording supported nahi hai.");
+  return;
+ }
+
+ const recorder=new MediaRecorder(stream,{mimeType:mime});
+ const chunks=[];
+
+ recorder.ondataavailable=e=>{
+  if(e.data.size>0)chunks.push(e.data);
+ };
+
+ recorder.onstop=()=>{
+  const blob=new Blob(chunks,{type:"video/webm"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download="MotionForge-Animation.webm";
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),3000);
+  stream.getTracks().forEach(track=>track.stop());
+  document.getElementById("status").textContent="Video export completed.";
+ };
+
+ recorder.start();
+ document.getElementById("status").textContent="Recording animation...";
+
+ const start=performance.now();
+ function recordFrame(now){
+  const t=now-start;
+  elapsed=Math.min(t,duration());
+  draw(elapsed);
+
+  if(t<duration()){
+   requestAnimationFrame(recordFrame);
+  }else{
+   recorder.stop();
+  }
+ }
+ requestAnimationFrame(recordFrame);
+}
+
+["shirt","skin","hair","background","action","name"].forEach(id=>{
+ document.getElementById(id).addEventListener("input",()=>draw(elapsed));
+});
+
+draw();
+</script>
+
+</body>
+</html>
